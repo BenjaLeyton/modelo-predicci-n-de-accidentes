@@ -918,6 +918,430 @@ export default function ModelStatus({ info, loading }: Props) {
           </div>
         </div>
 
+        {/* ── Prediction / Forecast Guide ── */}
+        <div className="px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h4 className="text-sm font-bold text-gray-700">¿Cómo funciona el Pronóstico de Accidentes?</h4>
+          </div>
+          <p className="text-xs text-gray-400 mb-5 ml-10">
+            El pronóstico usa <strong className="text-gray-500">XGBRegressor</strong> (la versión regresora de XGBoost)
+            para predecir <em>cuántos</em> accidentes ocurrirán en meses futuros. Es un proceso distinto al clasificador de Causa Raíz, pero usa el mismo motor de Machine Learning.
+          </p>
+
+          {/* ── STEP 1: Aggregation ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">1</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Los datos se agrupan por mes</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                En vez de ver cada accidente individual, el sistema cuenta <strong>cuántos accidentes hubo cada mes</strong>.
+                Esto convierte miles de filas en una serie temporal simple:
+              </p>
+              <div className="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100/30 overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="text-emerald-700 font-bold">
+                      <td className="pr-4 py-1">Periodo</td>
+                      <td className="pr-4 py-1">Ene 2023</td>
+                      <td className="pr-4 py-1">Feb 2023</td>
+                      <td className="pr-4 py-1">Mar 2023</td>
+                      <td className="pr-4 py-1">Abr 2023</td>
+                      <td className="pr-4 py-1">...</td>
+                      <td className="pr-4 py-1">Dic 2024</td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="text-gray-600">
+                      <td className="pr-4 py-1 font-semibold text-gray-700">Accidentes</td>
+                      <td className="pr-4 py-1">42</td>
+                      <td className="pr-4 py-1">38</td>
+                      <td className="pr-4 py-1">51</td>
+                      <td className="pr-4 py-1">35</td>
+                      <td className="pr-4 py-1">...</td>
+                      <td className="pr-4 py-1">29</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2 italic">
+                La serie se construye desde el primer al último mes con datos. Periodos sin accidentes se cuentan como 0.
+              </p>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">De cada mes se extraen variables (features) temporales</span>
+              <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ── STEP 2: Feature Engineering ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">2</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Se crean features temporales para XGBoost</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                XGBoost no entiende &ldquo;marzo 2024&rdquo;. Cada mes se convierte en <strong>variables numéricas</strong> que capturan distintos patrones:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <ForecastFeatureItem
+                  name="mes_cal"
+                  example="3.0"
+                  explanation="Mes del año (1-12). Captura patrones como 'más accidentes en invierno'."
+                />
+                <ForecastFeatureItem
+                  name="anio"
+                  example="2024.0"
+                  explanation="Año numérico. Detecta si hay tendencia creciente o decreciente a lo largo de los años."
+                />
+                <ForecastFeatureItem
+                  name="mes_sin / mes_cos"
+                  example="0.50 / -0.87"
+                  explanation="Estacionalidad cíclica: sin(2π·mes/12) y cos(2π·mes/12). Hace que diciembre y enero estén 'cerca' matemáticamente."
+                />
+                <ForecastFeatureItem
+                  name="t (tendencia)"
+                  example="23.0"
+                  explanation="Índice secuencial (0, 1, 2...). Captura la tendencia lineal: si los accidentes aumentan o disminuyen con el tiempo."
+                />
+                <ForecastFeatureItem
+                  name="lag_1, lag_2, lag_3"
+                  example="29, 35, 31"
+                  explanation="Accidentes de los 3 meses anteriores. Si el mes pasado fue alto, el siguiente podría serlo también."
+                />
+                <ForecastFeatureItem
+                  name="rolling_mean_3"
+                  example="31.7"
+                  explanation="Promedio móvil de los últimos 3 meses. Suaviza fluctuaciones y muestra la tendencia reciente."
+                />
+              </div>
+              <div className="mt-3 bg-teal-50/50 rounded-lg p-3 border border-teal-100/30">
+                <p className="text-[10px] text-teal-700 leading-relaxed">
+                  <strong>Nota:</strong> Con menos de 6 meses de datos, solo se usan las features base (mes, año, estacionalidad, tendencia).
+                  Los lags y media móvil se activan automáticamente cuando hay suficiente historia.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Estas features alimentan a XGBRegressor</span>
+              <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ── STEP 3: XGBRegressor training ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">3</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Se entrena un XGBRegressor sobre la serie mensual</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                A diferencia del clasificador (que predice una <em>categoría</em> RC), el regresor predice un <strong>número continuo</strong>: la cantidad de accidentes.
+              </p>
+
+              {/* Visual comparison */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div className="bg-blue-50/60 rounded-lg p-3 border border-blue-100/50">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Clasificador (RC)</span>
+                  </div>
+                  <p className="text-[11px] text-blue-600/80">Entrada: datos de 1 accidente</p>
+                  <p className="text-[11px] text-blue-600/80">Salida: <strong>&ldquo;RC 05&rdquo;</strong> (categoría)</p>
+                  <p className="text-[10px] text-blue-500/60 mt-1">XGBClassifier — 500 árboles</p>
+                </div>
+                <div className="bg-emerald-50/60 rounded-lg p-3 border border-emerald-100/50">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Regresor (Pronóstico)</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-600/80">Entrada: features del mes</p>
+                  <p className="text-[11px] text-emerald-600/80">Salida: <strong>&ldquo;37.2&rdquo;</strong> (cantidad)</p>
+                  <p className="text-[10px] text-emerald-500/60 mt-1">XGBRegressor — 20 a 100 árboles (ajustado según datos)</p>
+                </div>
+              </div>
+
+              {/* Hyperparameters info */}
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                <p className="text-[11px] text-gray-600 mb-2"><strong>¿Cómo se ajusta el modelo?</strong></p>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Los hiperparámetros se adaptan automáticamente al tamaño de los datos para evitar <strong>sobreajuste</strong> (memorizar los datos en vez de aprender patrones):
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400">Árboles</p>
+                    <p className="text-xs font-bold text-gray-700">20–100</p>
+                    <p className="text-[9px] text-gray-400">según N datos</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400">Profundidad</p>
+                    <p className="text-xs font-bold text-gray-700">2–3</p>
+                    <p className="text-[9px] text-gray-400">árboles simples</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400">Learning rate</p>
+                    <p className="text-xs font-bold text-gray-700">0.1</p>
+                    <p className="text-[9px] text-gray-400">paso conservador</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-2 border border-gray-100">
+                    <p className="text-[10px] text-gray-400">Regularización</p>
+                    <p className="text-xs font-bold text-gray-700">L1 + L2</p>
+                    <p className="text-[9px] text-gray-400">anti-sobreajuste</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sigma / residuals */}
+              <div className="mt-3 bg-amber-50/50 rounded-lg p-3 border border-amber-100/30">
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  <strong>Cálculo de incertidumbre (σ):</strong> Después de entrenar, el modelo predice los mismos datos históricos.
+                  La <strong>desviación estándar de los errores</strong> (residuos = real - predicho) es σ.
+                  Esto mide qué tan inexacto es el modelo y se usa para construir el intervalo de confianza.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">El modelo entrenado predice mes a mes iterativamente</span>
+              <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ── STEP 4: Iterative prediction ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">4</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Predicción iterativa: cada mes alimenta al siguiente</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                El modelo no predice todos los meses de golpe. Predice <strong>uno por uno</strong>, y la predicción de un mes se usa como input (lag) del siguiente:
+              </p>
+
+              {/* Visual iterative process */}
+              <div className="space-y-2 mb-4">
+                <ForecastIterStep
+                  month="Mar 2025"
+                  lags="lag₁ = 29 (real), lag₂ = 35 (real), lag₃ = 31 (real)"
+                  result="→ Predicción: 33.4"
+                  isFirst
+                />
+                <ForecastIterStep
+                  month="Abr 2025"
+                  lags="lag₁ = 33.4 (pred), lag₂ = 29 (real), lag₃ = 35 (real)"
+                  result="→ Predicción: 30.8"
+                />
+                <ForecastIterStep
+                  month="May 2025"
+                  lags="lag₁ = 30.8 (pred), lag₂ = 33.4 (pred), lag₃ = 29 (real)"
+                  result="→ Predicción: 35.1"
+                />
+                <div className="flex items-center gap-2 px-4">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-100" />
+                  </div>
+                  <span className="text-[10px] text-gray-400 italic">continúa mes a mes hasta el final del periodo solicitado</span>
+                </div>
+              </div>
+
+              <div className="bg-violet-50/50 rounded-lg p-3 border border-violet-100/30">
+                <p className="text-[11px] text-violet-700 leading-relaxed">
+                  <strong>¿Por qué es iterativo?</strong> Porque los lags (meses anteriores) son la señal más fuerte.
+                  Si el mes 1 predice un valor alto, el mes 2 lo &ldquo;verá&rdquo; como lag₁ y reaccionará.
+                  Esto mantiene coherencia entre los pronósticos: no son independientes, sino que forman una cadena lógica.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Se agrega incertidumbre creciente</span>
+              <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ── STEP 5: Confidence interval ── */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">5</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Intervalo de confianza al 95% (banda sombreada)</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                Ningún pronóstico es exacto. El sistema calcula un <strong>rango de incertidumbre</strong> alrededor de cada predicción:
+              </p>
+
+              {/* Formula visualization */}
+              <div className="bg-amber-50/50 rounded-lg p-4 border border-amber-100/30 mb-3">
+                <p className="text-xs font-mono text-center text-amber-800 mb-2">
+                  Límite = predicción ± 1.96 × σ × √(1 + meses_adelante / N)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+                  <div className="bg-white/70 rounded-lg p-2 border border-amber-100/30 text-center">
+                    <p className="font-bold text-amber-700">1.96</p>
+                    <p className="text-amber-600/70">Factor para 95% de confianza (distribución normal)</p>
+                  </div>
+                  <div className="bg-white/70 rounded-lg p-2 border border-amber-100/30 text-center">
+                    <p className="font-bold text-amber-700">σ (sigma)</p>
+                    <p className="text-amber-600/70">Error típico del modelo calculado sobre datos históricos</p>
+                  </div>
+                  <div className="bg-white/70 rounded-lg p-2 border border-amber-100/30 text-center">
+                    <p className="font-bold text-amber-700">√(1 + m/N)</p>
+                    <p className="text-amber-600/70">Factor de expansión: más lejos en el futuro = más incertidumbre</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  <strong>En la práctica:</strong> El primer mes pronosticado tiene una banda estrecha (el modelo tiene información reciente).
+                  El mes 12 tiene una banda ~2× más ancha. El mes 24 es aún más ancha.
+                  Esto refleja la realidad: <strong>predecir el mes siguiente es más fácil que predecir dentro de 2 años</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Arrow */}
+          <div className="flex justify-center my-2">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Se repite el proceso para cada Causa Raíz por separado</span>
+              <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ── STEP 6: Per-RC prediction ── */}
+          <div className="mb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs font-bold">6</span>
+              </div>
+              <h5 className="text-xs font-bold text-emerald-800">Distribución de Causa Raíz: un modelo XGBoost por cada RC</h5>
+            </div>
+            <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+              <p className="text-[11px] text-gray-500 mb-3">
+                No basta saber <em>cuántos</em> accidentes habrá. También se predice <strong>cómo se distribuirán</strong> entre las causas raíz:
+              </p>
+
+              {/* Visual per-RC models */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                {["RC 03", "RC 05", "RC 06", "RC 09", "RC 13", "OTROS"].map((rc) => (
+                  <div key={rc} className="bg-purple-50/60 rounded-lg p-2.5 border border-purple-100/50 text-center">
+                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold inline-block mb-1">{rc}</span>
+                    <p className="text-[10px] text-purple-600/70">
+                      XGBRegressor propio
+                    </p>
+                    <p className="text-[9px] text-purple-400">
+                      serie mensual independiente
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <div className="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100/30">
+                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                    <strong>RC con 6+ meses de datos:</strong> Se entrena un XGBRegressor dedicado con el mismo proceso de features temporales.
+                    Cada RC tiene su propia tendencia y estacionalidad — por ejemplo, RC 05 (entorno) puede subir en invierno mientras RC 13 (fatiga) sube en turnos nocturnos de verano.
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    <strong>RC con pocos datos (&lt;6 meses):</strong> No hay suficiente historia para que XGBoost aprenda.
+                    Se usa la proporción histórica de los últimos 12 meses como fallback (ej: si RC 25 fue el 5% del total, se le asigna 5% del pronóstico).
+                  </p>
+                </div>
+                <div className="bg-violet-50/50 rounded-lg p-3 border border-violet-100/30">
+                  <p className="text-[11px] text-violet-700 leading-relaxed">
+                    <strong>Normalización final:</strong> Las predicciones individuales de cada RC se normalizan para que sumen exactamente el total pronosticado.
+                    Esto garantiza consistencia: si el total es 37, las RC sumadas también dan 37.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="mt-5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 border border-emerald-100">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h4 className="text-sm font-bold text-emerald-800">Resumen del Proceso de Pronóstico</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white/60 rounded-lg p-3 border border-emerald-100/50">
+                <h5 className="text-xs font-bold text-emerald-700 mb-1">Entrada</h5>
+                <p className="text-[11px] text-emerald-600/80 leading-relaxed">
+                  Los mismos datos del Excel que alimentan el clasificador. Se agrupan por mes para obtener la serie temporal de conteos.
+                </p>
+              </div>
+              <div className="bg-white/60 rounded-lg p-3 border border-emerald-100/50">
+                <h5 className="text-xs font-bold text-emerald-700 mb-1">Proceso</h5>
+                <p className="text-[11px] text-emerald-600/80 leading-relaxed">
+                  XGBRegressor aprende patrones temporales (tendencia, estacionalidad, lags). Predice mes a mes encadenando predicciones anteriores.
+                </p>
+              </div>
+              <div className="bg-white/60 rounded-lg p-3 border border-emerald-100/50">
+                <h5 className="text-xs font-bold text-emerald-700 mb-1">Salida</h5>
+                <p className="text-[11px] text-emerald-600/80 leading-relaxed">
+                  Cantidad estimada por mes con intervalo de confianza al 95%, más distribución de RC con modelos independientes por categoría.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ── Classes - Always visible with descriptions ── */}
         {info.clases && info.clases.length > 0 && (
           <div className="px-6 py-5">
@@ -1213,6 +1637,35 @@ function PipelineStep({ number, title, description, color }: { number: number; t
       </div>
       <h5 className="text-xs font-bold text-gray-700 mb-1">{title}</h5>
       <p className="text-[11px] text-gray-500 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+function ForecastFeatureItem({ name, example, explanation }: { name: string; example: string; explanation: string }) {
+  return (
+    <div className="bg-teal-50/40 rounded-lg px-3 py-2 border border-teal-100/30">
+      <div className="flex items-center gap-2 mb-0.5">
+        <code className="text-[11px] font-mono font-bold text-teal-700">{name}</code>
+        <span className="text-[10px] text-teal-500 font-mono">= {example}</span>
+      </div>
+      <p className="text-[10px] text-gray-500 leading-relaxed">{explanation}</p>
+    </div>
+  );
+}
+
+function ForecastIterStep({ month, lags, result, isFirst }: { month: string; lags: string; result: string; isFirst?: boolean }) {
+  return (
+    <div className={`flex items-start gap-3 rounded-lg px-4 py-2.5 border ${isFirst ? "bg-emerald-50/50 border-emerald-200/50" : "bg-gray-50 border-gray-100"}`}>
+      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${isFirst ? "bg-emerald-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-bold text-gray-700">{month}</p>
+        <p className="text-[10px] text-gray-400 font-mono">{lags}</p>
+        <p className={`text-[11px] font-semibold mt-0.5 ${isFirst ? "text-emerald-700" : "text-gray-600"}`}>{result}</p>
+      </div>
     </div>
   );
 }
