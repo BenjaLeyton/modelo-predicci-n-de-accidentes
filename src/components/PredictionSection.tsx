@@ -24,7 +24,11 @@ function monthsBetween(a: string, b: string): number {
   return (db.getFullYear() - da.getFullYear()) * 12 + (db.getMonth() - da.getMonth());
 }
 
-export default function PredictionSection() {
+interface Props {
+  onMetrics?: (metrics: Record<string, number> | null) => void;
+}
+
+export default function PredictionSection({ onMetrics }: Props) {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -73,9 +77,11 @@ export default function PredictionSection() {
     try {
       const data = await getPrediction(startDate, endDate);
       setPrediction(data);
+      onMetrics?.(data.metricas_regressor ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al generar pronóstico");
       setPrediction(null);
+      onMetrics?.(null);
     } finally {
       setLoading(false);
     }
@@ -253,6 +259,40 @@ export default function PredictionSection() {
               <p className="text-xs text-gray-400 mt-1">meses utilizados</p>
             </div>
           </div>
+
+          {/* Regressor Metrics */}
+          {prediction.metricas_regressor && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              {([
+                { key: "mae", label: "MAE", desc: "Error Absoluto Medio", green: 3, amber: 6 },
+                { key: "rmse", label: "RMSE", desc: "Error Cuadrático Medio", green: 4, amber: 8 },
+                { key: "r2", label: "R\u00B2", desc: "Coef. Determinación", green: 0.7, amber: 0.4, invert: true },
+                { key: "sigma", label: "\u03C3", desc: "Desv. Estándar Residual", green: 4, amber: 8 },
+              ] as const).map((m) => {
+                const val = prediction.metricas_regressor![m.key];
+                if (val == null) return null;
+                const isGood = "invert" in m && m.invert ? val >= m.green : val <= m.green;
+                const isMid = "invert" in m && m.invert ? val >= m.amber : val <= m.amber;
+                const color = isGood ? "emerald" : isMid ? "amber" : "red";
+                const bg = color === "emerald" ? "bg-emerald-50 border-emerald-200" : color === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
+                const text = color === "emerald" ? "text-emerald-700" : color === "amber" ? "text-amber-700" : "text-red-700";
+                const badge = color === "emerald" ? "bg-emerald-100 text-emerald-700" : color === "amber" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+                const levelText = isGood ? "Bueno" : isMid ? "Aceptable" : "Alto";
+                return (
+                  <div key={m.key} className={`rounded-2xl border p-4 ${bg}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-gray-500">{m.label}</span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badge}`}>{levelText}</span>
+                    </div>
+                    <p className={`text-xl font-bold ${text} tabular-nums`}>
+                      {m.key === "r2" ? val.toFixed(4) : val.toFixed(2)}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{m.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

@@ -5,6 +5,7 @@ import type { ModelInfo } from "@/lib/api";
 interface Props {
   info: ModelInfo | null;
   loading: boolean;
+  regressorMetrics?: Record<string, number> | null;
 }
 
 /* ── RC class descriptions (short, for tooltips) ── */
@@ -23,57 +24,23 @@ const RC_DESCRIPTIONS: Record<string, string> = {
   "OTROS": "Causas minoritarias agrupadas por el modelo",
 };
 
-/* ── Metric config (labels only) ── */
-const METRIC_INFO: Record<string, { label: string; icon: string }> = {
-  accuracy: {
-    label: "Accuracy",
-    icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-  },
-  f1_weighted: {
-    label: "F1 Weighted",
-    icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3",
-  },
-  f1_macro: {
-    label: "F1 Macro",
-    icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4",
-  },
-  roc_auc: {
-    label: "ROC AUC",
-    icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
-  },
-};
 
-function getMetricColor(key: string, value: number): string {
-  if (key === "roc_auc") {
-    if (value >= 0.85) return "emerald";
-    if (value >= 0.7) return "amber";
-    return "red";
-  }
-  if (value >= 0.7) return "emerald";
-  if (value >= 0.5) return "amber";
-  return "red";
+const REGRESSOR_METRICS = [
+  { key: "mae", label: "MAE", desc: "Error Absoluto Medio", green: 3, amber: 6, invert: false },
+  { key: "rmse", label: "RMSE", desc: "Error Cuadrático Medio", green: 4, amber: 8, invert: false },
+  { key: "r2", label: "R\u00B2", desc: "Coef. Determinación", green: 0.7, amber: 0.4, invert: true },
+  { key: "sigma", label: "\u03C3", desc: "Desv. Estándar Residual", green: 4, amber: 8, invert: false },
+] as const;
+
+function getMetricStyle(val: number, green: number, amber: number, invert: boolean) {
+  const isGood = invert ? val >= green : val <= green;
+  const isMid = invert ? val >= amber : val <= amber;
+  if (isGood) return { color: "emerald", level: "Bueno", bg: "bg-emerald-50", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-700" };
+  if (isMid) return { color: "amber", level: "Aceptable", bg: "bg-amber-50", text: "text-amber-700", badge: "bg-amber-100 text-amber-700" };
+  return { color: "red", level: "Alto", bg: "bg-red-50", text: "text-red-700", badge: "bg-red-100 text-red-700" };
 }
 
-function getMetricLevel(key: string, value: number): string {
-  if (key === "roc_auc") {
-    if (value >= 0.9) return "Excelente";
-    if (value >= 0.8) return "Muy bueno";
-    if (value >= 0.7) return "Bueno";
-    return "Mejorable";
-  }
-  if (value >= 0.8) return "Excelente";
-  if (value >= 0.7) return "Bueno";
-  if (value >= 0.5) return "Moderado";
-  return "Mejorable";
-}
-
-const colorMap: Record<string, { bg: string; fill: string; text: string; light: string }> = {
-  emerald: { bg: "bg-emerald-50", fill: "bg-emerald-500", text: "text-emerald-700", light: "bg-emerald-100" },
-  amber: { bg: "bg-amber-50", fill: "bg-amber-500", text: "text-amber-700", light: "bg-amber-100" },
-  red: { bg: "bg-red-50", fill: "bg-red-500", text: "text-red-700", light: "bg-red-100" },
-};
-
-export default function ModelStatusCompact({ info, loading }: Props) {
+export default function ModelStatusCompact({ info, loading, regressorMetrics }: Props) {
   /* ── Loading ── */
   if (loading) {
     return (
@@ -150,7 +117,7 @@ export default function ModelStatusCompact({ info, loading }: Props) {
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            XGBoost Classifier
+            XGBoost
           </span>
           {info.necesita_actualizacion && (
             <span className="bg-orange-200 text-orange-800 px-2.5 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1">
@@ -166,9 +133,9 @@ export default function ModelStatusCompact({ info, loading }: Props) {
       {/* Brief description */}
       <div className="px-6 py-4 border-b border-gray-100">
         <p className="text-sm text-gray-500 leading-relaxed">
-          Modelo de <strong className="text-gray-700">clasificación de Causa Raíz</strong> entrenado con{" "}
+          Modelo de <strong className="text-gray-700">clasificación y pronóstico</strong> entrenado con{" "}
           <strong className="text-gray-700">{info.total_registros_entrenamiento?.toLocaleString() || "—"} registros</strong>.
-          Analiza datos de cada accidente y predice automáticamente la causa raíz (RC) más probable.
+          Clasifica la causa raíz (RC) de accidentes y pronostica conteos futuros con XGBRegressor.
         </p>
       </div>
 
@@ -198,47 +165,36 @@ export default function ModelStatusCompact({ info, loading }: Props) {
         </div>
       </div>
 
-      {/* Compact Metrics */}
-      {info.metricas && (
+      {/* Regressor Metrics */}
+      {regressorMetrics ? (
         <div className="px-6 py-4 border-b border-gray-100">
-          <h4 className="text-xs font-bold text-gray-600 mb-3">Rendimiento</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(["accuracy", "f1_weighted", "f1_macro", "roc_auc"] as const).map((key) => {
-              const val = info.metricas![key];
+          <h4 className="text-xs font-bold text-gray-600 mb-3">Rendimiento del Pronóstico (XGBRegressor)</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {REGRESSOR_METRICS.map((m) => {
+              const val = regressorMetrics[m.key];
               if (val == null) return null;
-              const metricInfo = METRIC_INFO[key];
-              const color = getMetricColor(key, val);
-              const level = getMetricLevel(key, val);
-              const colors = colorMap[color];
-
+              const s = getMetricStyle(val, m.green, m.amber, m.invert);
               return (
-                <div key={key} className="flex items-center gap-3">
-                  <svg className={`w-4 h-4 ${colors.text} shrink-0`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={metricInfo.icon} />
-                  </svg>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-gray-600">{metricInfo.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${colors.light} ${colors.text}`}>
-                          {level}
-                        </span>
-                        <span className="text-xs font-bold text-gray-800 tabular-nums">
-                          {(val * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${colors.fill} transition-all duration-700`}
-                        style={{ width: `${Math.min(val * 100, 100)}%` }}
-                      />
-                    </div>
+                <div key={m.key} className={`rounded-xl border p-3 ${s.bg}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-gray-500">{m.label}</span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.badge}`}>{s.level}</span>
                   </div>
+                  <p className={`text-lg font-bold ${s.text} tabular-nums`}>
+                    {m.key === "r2" ? val.toFixed(4) : val.toFixed(2)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
                 </div>
               );
             })}
           </div>
+        </div>
+      ) : (
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h4 className="text-xs font-bold text-gray-600 mb-2">Rendimiento del Pronóstico (XGBRegressor)</h4>
+          <p className="text-xs text-gray-400">
+            Las métricas MAE, RMSE, R² y σ aparecerán aquí tras generar un pronóstico en la sección inferior.
+          </p>
         </div>
       )}
 

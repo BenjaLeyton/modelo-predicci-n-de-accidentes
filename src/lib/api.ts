@@ -105,6 +105,7 @@ export interface PredictionData {
   metodologia: string;
   datos_historicos_usados: number;
   advertencias: string[];
+  metricas_regressor?: Record<string, number>;
 }
 
 /* ── Fetch functions ── */

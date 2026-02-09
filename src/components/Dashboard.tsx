@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"panel" | "guia">("panel");
+  const [regressorMetrics, setRegressorMetrics] = useState<Record<string, number> | null>(null);
 
   const [startDate, setStartDate] = useState("2024-01-01");
   const [endDate, setEndDate] = useState("2024-12-31");
@@ -130,7 +131,7 @@ export default function Dashboard() {
             <UploadSection onTrainComplete={fetchModel} modelInfo={modelInfo} modelLoading={modelLoading} />
 
             {/* 2. MODELO (compacto) */}
-            <ModelStatusCompact info={modelInfo} loading={modelLoading} />
+            <ModelStatusCompact info={modelInfo} loading={modelLoading} regressorMetrics={regressorMetrics} />
 
             {/* 3. ANÁLISIS HISTÓRICO */}
             <section>
@@ -246,7 +247,7 @@ export default function Dashboard() {
             </section>
 
             {/* 4. PRONÓSTICO */}
-            <PredictionSection />
+            <PredictionSection onMetrics={setRegressorMetrics} />
           </div>
         </div>
 
