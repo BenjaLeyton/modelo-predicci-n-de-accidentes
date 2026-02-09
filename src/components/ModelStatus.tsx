@@ -208,68 +208,109 @@ export default function ModelStatus({ info, loading }: Props) {
             </div>
           </div>
 
-          {/* How does prediction work internally - VISUAL */}
-          <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-5 border border-violet-100 mb-5">
+          {/* How does the forecast work internally - VISUAL */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 border border-emerald-100 mb-5">
             <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              <h4 className="text-sm font-bold text-violet-800">¿Cómo predice internamente el modelo?</h4>
+              <h4 className="text-sm font-bold text-emerald-800">¿Cómo calcula el pronóstico de accidentes?</h4>
             </div>
-            <p className="text-xs text-violet-700/80 leading-relaxed mb-5">
-              Veamos paso a paso qué ocurre cuando el modelo recibe un accidente nuevo:
+            <p className="text-xs text-emerald-700/80 leading-relaxed mb-5">
+              El pronóstico usa <strong>XGBRegressor</strong> (versión regresora de XGBoost) para predecir <em>cuántos</em> accidentes habrá cada mes. Veamos paso a paso:
             </p>
 
-            {/* ── STEP 1: Input data visualization ── */}
+            {/* ── STEP 1: Monthly aggregation ── */}
             <div className="mb-2">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-sm">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm">
                   <span className="text-white text-xs font-bold">1</span>
                 </div>
-                <h5 className="text-xs font-bold text-violet-800">Los datos crudos se transforman en números</h5>
+                <h5 className="text-xs font-bold text-emerald-800">Los accidentes se agrupan por mes</h5>
               </div>
-              <div className="bg-white/70 rounded-xl p-4 border border-violet-100/50">
-                <p className="text-[11px] text-violet-600/70 mb-3">El modelo solo entiende números. Cada dato se convierte así:</p>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-emerald-600/70 mb-3">En vez de analizar cada accidente individual, el sistema cuenta cuántos ocurrieron cada mes:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <DataTransform id="tfidf" raw="Descripción: &quot;Caída de roca...&quot;" transformed="→ TF-IDF[caída] = 0.82" explanation="Puntaje de relevancia de cada palabra" />
-                  <DataTransform id="edad" raw="Edad: 38 años" transformed="→ Edad_norm = -0.23" explanation="Normalizada: (38 - promedio) / desviación" />
-                  <DataTransform id="turno" raw="Turno: &quot;Noche&quot;" transformed="→ Turno = 2" explanation="Día=0, Tarde=1, Noche=2" />
-                  <DataTransform id="gcia" raw="Gcia: &quot;GMIN&quot;" transformed="→ Gcia = 4" explanation="Cada gerencia tiene un código" />
-                  <DataTransform id="fecha" raw="Fecha: 15-Mar-2024" transformed="→ DiaSemana=4, Mes=3" explanation="Se extraen variables temporales" />
-                  <DataTransform id="cargo" raw="Cargo: &quot;Operador&quot;" transformed="→ Cargo = 15" explanation="Se asigna un número a cada cargo" />
+                  <DataTransform id="agg-ene" raw="Enero 2024: 42 accidentes" transformed="→ cantidad = 42.0" explanation="Conteo simple del mes" />
+                  <DataTransform id="agg-feb" raw="Febrero 2024: 38 accidentes" transformed="→ cantidad = 38.0" explanation="Conteo simple del mes" />
+                  <DataTransform id="agg-mar" raw="Marzo 2024: 51 accidentes" transformed="→ cantidad = 51.0" explanation="Mes con más accidentes" />
+                  <DataTransform id="agg-abr" raw="Abril 2024: 35 accidentes" transformed="→ cantidad = 35.0" explanation="Conteo simple del mes" />
+                  <DataTransform id="agg-etc" raw="..." transformed="..." explanation="Un valor por cada mes histórico" />
+                  <DataTransform id="agg-dic" raw="Dic 2024: 29 accidentes" transformed="→ cantidad = 29.0" explanation="Último dato conocido" />
                 </div>
+                <p className="text-[10px] text-emerald-500/60 mt-2 italic">
+                  Esto convierte miles de filas del Excel en una serie temporal simple: un número por mes.
+                </p>
               </div>
             </div>
 
-            {/* Arrow connecting step 1 to step 2 */}
+            {/* Arrow 1→2 */}
             <div className="flex justify-center my-2">
               <div className="flex flex-col items-center">
-                <span className="text-[10px] text-violet-400 font-semibold bg-violet-100/50 px-3 py-1 rounded-full">Estos números entran al árbol como variables</span>
-                <svg className="w-5 h-5 text-violet-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">De cada mes se extraen variables numéricas (features)</span>
+                <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
               </div>
             </div>
 
-            {/* ── STEP 2: Decision tree with numerical values ── */}
-            <div className="mb-6">
+            {/* ── STEP 2: Feature engineering ── */}
+            <div className="mb-2">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
                   <span className="text-white text-xs font-bold">2</span>
                 </div>
-                <h5 className="text-xs font-bold text-violet-800">Cada árbol pregunta sobre esos números (ejemplo de 1 de los 500)</h5>
+                <h5 className="text-xs font-bold text-emerald-800">Cada mes se convierte en variables temporales</h5>
               </div>
-              <div className="bg-white/70 rounded-xl p-4 border border-violet-100/50 overflow-x-auto">
-                <p className="text-[11px] text-violet-600/70 mb-4">Cada nodo muestra la pregunta humana y cómo la máquina la evalúa con números. Sigue el camino <strong className="text-emerald-600">verde</strong>:</p>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-emerald-600/70 mb-3">XGBoost no entiende &ldquo;marzo 2024&rdquo;. Se crean números que capturan patrones temporales:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <DataTransform id="fc-mes" raw="Marzo 2024" transformed="→ mes_cal = 3.0" explanation="Mes del año (1-12)" />
+                  <DataTransform id="fc-anio" raw="Marzo 2024" transformed="→ anio = 2024.0" explanation="Detecta tendencia entre años" />
+                  <DataTransform id="fc-sin" raw="Marzo (mes 3)" transformed="→ mes_sin = 1.0, mes_cos = 0.0" explanation="Estacionalidad: sin/cos(2π·3/12)" />
+                  <DataTransform id="fc-t" raw="Mes #24 de la serie" transformed="→ t = 23.0" explanation="Índice de tendencia (0, 1, 2...)" />
+                  <DataTransform id="fc-lag" raw="Meses anteriores: 29, 35, 31" transformed="→ lag₁=29, lag₂=35, lag₃=31" explanation="Accidentes de los 3 meses previos" />
+                  <DataTransform id="fc-roll" raw="Promedio últimos 3 meses" transformed="→ rolling_mean_3 = 31.7" explanation="Suaviza fluctuaciones recientes" />
+                </div>
+                <div className="mt-2 bg-teal-50/50 rounded-lg p-2.5 border border-teal-100/30">
+                  <p className="text-[10px] text-teal-700">
+                    <strong>Adaptación automática:</strong> Con menos de 6 meses solo se usan las features base (mes, año, sin/cos, t). Los lags y media móvil se activan con más historia.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                {/* Tree diagram with dual perspective */}
+            {/* Arrow 2→3 */}
+            <div className="flex justify-center my-2">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Estas features alimentan un árbol regresor (ejemplo de 1 de ~60)</span>
+                <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </div>
+            </div>
+
+            {/* ── STEP 3: Regressor tree visual ── */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-xs font-bold">3</span>
+                </div>
+                <h5 className="text-xs font-bold text-emerald-800">Cada árbol pregunta sobre esos números y predice una cantidad</h5>
+              </div>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50 overflow-x-auto">
+                <p className="text-[11px] text-emerald-600/70 mb-4">
+                  A diferencia del clasificador (que devuelve una categoría RC), aquí cada hoja devuelve un <strong className="text-emerald-700">número</strong>. Sigue el camino <strong className="text-emerald-600">verde</strong>:
+                </p>
+
+                {/* Regressor tree diagram */}
                 <div className="min-w-[680px]">
                   {/* Root node */}
                   <div className="flex justify-center mb-1">
                     <DualTreeNode
-                      humanQ="¿La descripción habla de &quot;caída&quot; o &quot;golpe&quot;?"
-                      machineQ="TF-IDF[caída] > 0.5?"
-                      machineVal="Valor actual: 0.82"
+                      humanQ="¿El mes anterior tuvo muchos accidentes?"
+                      machineQ="lag_1 > 40?"
+                      machineVal="Valor actual: 29.0"
                       active
                     />
                   </div>
@@ -277,12 +318,12 @@ export default function ModelStatus({ info, loading }: Props) {
                   <div className="flex justify-center mb-1">
                     <div className="flex items-start" style={{ width: 540 }}>
                       <div className="w-1/2 flex flex-col items-center">
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">SÍ → 0.82 &gt; 0.5 ✓</span>
-                        <div className="w-[2px] h-4 bg-emerald-400" />
+                        <span className="text-[10px] font-bold text-gray-300 px-2 py-0.5">SÍ</span>
+                        <div className="w-[2px] h-4 bg-gray-200" />
                       </div>
                       <div className="w-1/2 flex flex-col items-center">
-                        <span className="text-[10px] font-bold text-gray-300 px-2 py-0.5">NO</span>
-                        <div className="w-[2px] h-4 bg-gray-200" />
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">NO → 29 &lt; 40 ✓</span>
+                        <div className="w-[2px] h-4 bg-emerald-400" />
                       </div>
                     </div>
                   </div>
@@ -291,18 +332,18 @@ export default function ModelStatus({ info, loading }: Props) {
                     <div className="flex gap-4" style={{ width: 580 }}>
                       <div className="flex-1 flex justify-center">
                         <DualTreeNode
-                          humanQ="¿El trabajador es mayor de 45 años?"
-                          machineQ="Edad_norm > 0.5?"
-                          machineVal="Valor actual: -0.23 (38 años)"
-                          active
+                          humanQ="¿Es temporada de invierno?"
+                          machineQ="mes_sin > 0.5?"
+                          machineVal="(no se evalúa)"
+                          dimmed
                         />
                       </div>
                       <div className="flex-1 flex justify-center">
                         <DualTreeNode
-                          humanQ="¿Fue en turno noche?"
-                          machineQ="Turno = 2?"
-                          machineVal="(no se evalúa)"
-                          dimmed
+                          humanQ="¿La tendencia viene subiendo?"
+                          machineQ="rolling_mean_3 > 33?"
+                          machineVal="Valor actual: 31.7"
+                          active
                         />
                       </div>
                     </div>
@@ -312,31 +353,40 @@ export default function ModelStatus({ info, loading }: Props) {
                     <div className="flex gap-4" style={{ width: 580 }}>
                       <div className="flex-1 flex items-start">
                         <div className="w-1/2 flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-gray-300">SÍ</span>
-                          <div className="w-[2px] h-4 bg-gray-200" />
+                          <div className="w-[2px] h-4 bg-gray-100" />
                         </div>
                         <div className="w-1/2 flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">NO → -0.23 &lt; 0.5 ✓</span>
-                          <div className="w-[2px] h-4 bg-emerald-400" />
+                          <div className="w-[2px] h-4 bg-gray-100" />
                         </div>
                       </div>
                       <div className="flex-1 flex items-start">
                         <div className="w-1/2 flex flex-col items-center">
-                          <div className="w-[2px] h-4 bg-gray-100" />
+                          <span className="text-[10px] font-bold text-gray-300">SÍ</span>
+                          <div className="w-[2px] h-4 bg-gray-200" />
                         </div>
                         <div className="w-1/2 flex flex-col items-center">
-                          <div className="w-[2px] h-4 bg-gray-100" />
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">NO → 31.7 &lt; 33 ✓</span>
+                          <div className="w-[2px] h-4 bg-emerald-400" />
                         </div>
                       </div>
                     </div>
                   </div>
-                  {/* Leaf nodes */}
+                  {/* Leaf nodes — numbers instead of categories */}
                   <div className="flex justify-center">
                     <div className="flex gap-3" style={{ width: 600 }}>
-                      <TreeNode text="RC 05" type="leaf" />
-                      <TreeNode text="RC 03" type="leaf" highlight />
-                      <TreeNode text="RC 13" type="leaf" dimmed />
-                      <TreeNode text="RC 06" type="leaf" dimmed />
+                      <div className="flex-1 rounded-xl px-3 py-2.5 text-center border-2 shadow-sm bg-gray-50 border-gray-100 opacity-30">
+                        <span className="text-xs font-bold text-gray-500">+2.1</span>
+                      </div>
+                      <div className="flex-1 rounded-xl px-3 py-2.5 text-center border-2 shadow-sm bg-gray-50 border-gray-100 opacity-30">
+                        <span className="text-xs font-bold text-gray-500">+0.8</span>
+                      </div>
+                      <div className="flex-1 rounded-xl px-3 py-2.5 text-center border-2 shadow-sm bg-gray-50 border-gray-200">
+                        <span className="text-xs font-bold text-gray-500">+1.5</span>
+                      </div>
+                      <div className="flex-1 rounded-xl px-3 py-2.5 text-center border-2 shadow-sm bg-emerald-100 border-emerald-400 ring-2 ring-emerald-300/50">
+                        <span className="text-xs font-bold text-emerald-700">-0.3</span>
+                        <span className="text-[9px] text-emerald-500 block mt-0.5">← Llega aquí</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -344,47 +394,48 @@ export default function ModelStatus({ info, loading }: Props) {
                 {/* Trace explanation */}
                 <div className="mt-4 bg-emerald-50/80 rounded-lg p-3 border border-emerald-200/50">
                   <p className="text-[11px] text-emerald-700 leading-relaxed">
-                    <strong>Recorrido:</strong> &quot;¿Habla de caída?&quot; → la máquina ve que TF-IDF[caída] = 0.82 &gt; 0.5 → <strong className="text-emerald-800">SÍ</strong>
-                    → &quot;¿Es mayor de 45?&quot; → la máquina ve Edad_norm = -0.23 (38 años), no es &gt; 0.5 → <strong className="text-emerald-800">NO</strong>
-                    → Hoja: <strong className="text-emerald-800">RC 03</strong> (Falta de procedimientos).
-                    Este es el voto de <strong>1 solo árbol</strong>. Los otros 499 hacen lo mismo con distintas preguntas.
+                    <strong>Recorrido:</strong> &quot;¿Mes anterior &gt; 40?&quot; → lag₁ = 29, no es &gt; 40 → <strong className="text-emerald-800">NO</strong>
+                    → &quot;¿Tendencia subiendo?&quot; → rolling_mean = 31.7, no es &gt; 33 → <strong className="text-emerald-800">NO</strong>
+                    → Hoja: <strong className="text-emerald-800">-0.3</strong>.
+                    Esto es la <strong>corrección</strong> de este árbol. Los otros ~59 árboles aportan sus propias correcciones.
                   </p>
                 </div>
 
-                <p className="text-[10px] text-violet-500/60 mt-3 text-center italic">
-                  Ejemplo simplificado. En realidad cada árbol tiene hasta 8 niveles y usa distintas combinaciones de variables.
+                <p className="text-[10px] text-emerald-500/60 mt-3 text-center italic">
+                  A diferencia del clasificador (500 árboles, categorías), el regresor usa 20-100 árboles y devuelve números que se suman.
                 </p>
               </div>
             </div>
 
-            {/* ── STEP 3: 500 trees vote ── */}
+            {/* ── STEP 4: Trees sum to prediction ── */}
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-xs font-bold">3</span>
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-xs font-bold">4</span>
                 </div>
-                <h5 className="text-xs font-bold text-violet-800">Los 500 árboles votan y se suman sus resultados</h5>
+                <h5 className="text-xs font-bold text-emerald-800">Los árboles suman sus correcciones para dar el pronóstico</h5>
               </div>
-              <div className="bg-white/70 rounded-xl p-4 border border-violet-100/50">
-                <p className="text-[11px] text-violet-600/70 mb-4">
-                  Cada árbol da su &quot;voto&quot; (un puntaje) para cada causa raíz. Los votos se suman y se convierten en probabilidades con Softmax:
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-emerald-600/70 mb-4">
+                  Cada árbol aporta una corrección pequeña. Se suman todas para obtener la predicción final:
                 </p>
-                {/* Visual voting */}
+                {/* Visual tree corrections */}
                 <div className="grid grid-cols-5 gap-2 mb-4">
-                  {[1, 2, 3, "...", 500].map((n, i) => (
+                  {[
+                    { n: 1, val: "-0.3" },
+                    { n: 2, val: "+1.2" },
+                    { n: 3, val: "-0.5" },
+                    { n: "...", val: "" },
+                    { n: 60, val: "+0.8" },
+                  ].map((item, i) => (
                     <div key={i} className={`rounded-lg p-2 text-center border ${
-                      n === "..." ? "border-dashed border-violet-200 bg-transparent" : "bg-violet-50 border-violet-200"
+                      item.n === "..." ? "border-dashed border-emerald-200 bg-transparent" : "bg-emerald-50 border-emerald-200"
                     }`}>
-                      <div className="text-[10px] font-bold text-violet-500 mb-1">
-                        {n === "..." ? "..." : `Árbol ${n}`}
+                      <div className="text-[10px] font-bold text-emerald-500 mb-1">
+                        {item.n === "..." ? "..." : `Árbol ${item.n}`}
                       </div>
-                      {n !== "..." && (
-                        <div className="text-[9px] text-violet-400 leading-tight">
-                          {i === 0 && "RC 05 ✓"}
-                          {i === 1 && "RC 03 ✓"}
-                          {i === 2 && "RC 05 ✓"}
-                          {i === 4 && "RC 05 ✓"}
-                        </div>
+                      {item.val && (
+                        <div className="text-[11px] font-mono font-bold text-emerald-700">{item.val}</div>
                       )}
                     </div>
                   ))}
@@ -392,35 +443,128 @@ export default function ModelStatus({ info, loading }: Props) {
                 {/* Arrow */}
                 <div className="flex justify-center my-3">
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] text-violet-400 font-semibold mb-1">Se suman puntajes → Softmax → Probabilidades</span>
-                    <svg className="w-6 h-6 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <span className="text-[10px] text-emerald-400 font-semibold mb-1">Base (promedio) + suma de correcciones = Predicción</span>
+                    <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
                   </div>
                 </div>
-                {/* Probability bars */}
-                <div className="space-y-2">
-                  <ProbabilityBar label="RC 05" sublabel="Condiciones del entorno" value={45} isWinner />
-                  <ProbabilityBar label="RC 03" sublabel="Falta de procedimientos" value={25} />
-                  <ProbabilityBar label="RC 13" sublabel="Factores personales" value={15} />
-                  <ProbabilityBar label="RC 06" sublabel="Falla de equipos" value={8} />
-                  <ProbabilityBar label="Otras" sublabel="7 clases restantes" value={7} />
-                </div>
                 {/* Result */}
-                <div className="mt-4 bg-emerald-50 rounded-lg p-3 border border-emerald-200 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                  <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
+                    <div className="text-center bg-white rounded-lg px-3 py-2 border border-gray-200">
+                      <p className="text-[10px] text-gray-400">Base</p>
+                      <p className="text-sm font-bold text-gray-700">35.0</p>
+                    </div>
+                    <span className="text-lg font-bold text-gray-400">+</span>
+                    <div className="text-center bg-white rounded-lg px-3 py-2 border border-emerald-200">
+                      <p className="text-[10px] text-emerald-500">Σ correcciones</p>
+                      <p className="text-sm font-bold text-emerald-700">-1.6</p>
+                    </div>
+                    <span className="text-lg font-bold text-gray-400">=</span>
+                    <div className="text-center bg-emerald-500 rounded-lg px-4 py-2 shadow-md shadow-emerald-500/20">
+                      <p className="text-[10px] text-emerald-100">Pronóstico</p>
+                      <p className="text-lg font-bold text-white">33.4</p>
+                    </div>
+                    <span className="text-[11px] text-gray-500">accidentes estimados para el mes</span>
+                  </div>
+                  <div className="bg-white/70 rounded-lg p-3 border border-emerald-100">
+                    <p className="text-[11px] text-emerald-700 leading-relaxed">
+                      <strong>¿Por qué sumas y no votos?</strong> El clasificador vota por categorías (RC 03, RC 05...).
+                      El regresor predice un <strong>número continuo</strong>: cada árbol aporta una corrección numérica (+1.2, -0.3...)
+                      que se suma a una base. El resultado es la cantidad estimada de accidentes para ese mes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── STEP 5: Iterative month by month ── */}
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-xs font-bold">5</span>
+                </div>
+                <h5 className="text-xs font-bold text-emerald-800">Se repite mes a mes: cada predicción alimenta al siguiente</h5>
+              </div>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-emerald-600/70 mb-4">
+                  El modelo no predice todos los meses de golpe. Predice <strong>uno por uno</strong>, y cada resultado se usa como lag del siguiente:
+                </p>
+
+                {/* Iterative chain visualization */}
+                <div className="space-y-0">
+                  {/* Month 1 */}
+                  <div className="flex items-start gap-3 rounded-t-xl px-4 py-3 bg-emerald-50/50 border border-emerald-200/50 border-b-0">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-emerald-800">Mar 2025</p>
+                      <p className="text-[10px] text-gray-400 font-mono">lag₁ = <strong className="text-emerald-600">29</strong> (real), lag₂ = <strong className="text-emerald-600">35</strong> (real), lag₃ = <strong className="text-emerald-600">31</strong> (real) + mes_sin, mes_cos, t...</p>
+                      <p className="text-[11px] font-semibold text-emerald-700 mt-0.5">→ XGBRegressor predice: <strong>33.4</strong> accidentes</p>
+                    </div>
+                  </div>
+                  {/* Arrow */}
+                  <div className="flex items-center px-7 py-0.5 bg-white border-x border-emerald-200/50">
+                    <svg className="w-4 h-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
+                    <span className="text-[9px] text-emerald-400 ml-1">la predicción 33.4 se convierte en lag₁ del siguiente mes</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-emerald-800">
-                      Predicción final: RC 05 — Condiciones del entorno (45% de confianza)
-                    </p>
-                    <p className="text-[11px] text-emerald-600">
-                      El modelo elige la clase con mayor probabilidad. Un 45% en 12 clases posibles es una señal fuerte.
-                    </p>
+                  {/* Month 2 */}
+                  <div className="flex items-start gap-3 px-4 py-3 bg-gray-50 border border-emerald-200/50 border-b-0 border-t-0">
+                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-gray-700">Abr 2025</p>
+                      <p className="text-[10px] text-gray-400 font-mono">lag₁ = <strong className="text-amber-600">33.4</strong> (pred), lag₂ = <strong className="text-emerald-600">29</strong> (real), lag₃ = <strong className="text-emerald-600">35</strong> (real)</p>
+                      <p className="text-[11px] font-semibold text-gray-600 mt-0.5">→ XGBRegressor predice: <strong>30.8</strong> accidentes</p>
+                    </div>
                   </div>
+                  {/* Arrow */}
+                  <div className="flex items-center px-7 py-0.5 bg-white border-x border-emerald-200/50">
+                    <svg className="w-4 h-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    <span className="text-[9px] text-emerald-400 ml-1">la predicción 30.8 se convierte en lag₁ del siguiente mes</span>
+                  </div>
+                  {/* Month 3 */}
+                  <div className="flex items-start gap-3 px-4 py-3 bg-gray-50 border border-emerald-200/50 border-t-0">
+                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-gray-700">May 2025</p>
+                      <p className="text-[10px] text-gray-400 font-mono">lag₁ = <strong className="text-amber-600">30.8</strong> (pred), lag₂ = <strong className="text-amber-600">33.4</strong> (pred), lag₃ = <strong className="text-emerald-600">29</strong> (real)</p>
+                      <p className="text-[11px] font-semibold text-gray-600 mt-0.5">→ XGBRegressor predice: <strong>35.1</strong> accidentes</p>
+                    </div>
+                  </div>
+                  {/* Dots */}
+                  <div className="flex items-center gap-2 px-7 py-2">
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-200" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-100" />
+                    </div>
+                    <span className="text-[10px] text-gray-400 italic">continúa mes a mes hasta el final del periodo solicitado (máx. 24 meses)</span>
+                  </div>
+                </div>
+
+                {/* Explanation */}
+                <div className="mt-3 bg-violet-50/50 rounded-lg p-3 border border-violet-100/30">
+                  <p className="text-[11px] text-violet-700 leading-relaxed">
+                    <strong>¿Por qué importa el orden?</strong> Porque los lags son la señal más fuerte. Si el mes 1 predice un valor alto,
+                    el mes 2 lo &ldquo;verá&rdquo; como lag₁ y reaccionará. Esto mantiene coherencia: los pronósticos forman una cadena lógica, no son independientes.
+                    Nota: los valores en <strong className="text-amber-600">naranja</strong> son predicciones previas (no datos reales), por eso la incertidumbre crece.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1545,73 +1689,7 @@ function DataTransform({ id, raw, transformed, explanation }: { id: string; raw:
   );
 }
 
-function TreeNode({ text, question, detail, type, highlight, active, dimmed }: {
-  text?: string;
-  question?: string;
-  detail?: string;
-  type: "question" | "leaf";
-  highlight?: boolean;
-  active?: boolean;
-  dimmed?: boolean;
-}) {
-  if (type === "question") {
-    return (
-      <div className={`rounded-xl px-4 py-2.5 text-center shadow-sm border-2 ${
-        dimmed
-          ? "bg-gray-50 border-gray-200 opacity-40"
-          : active
-          ? "bg-violet-100 border-violet-400 ring-2 ring-violet-300/30"
-          : "bg-violet-100 border-violet-300"
-      }`}>
-        <span className="text-[11px] font-semibold text-violet-800 block">{question || text}</span>
-        {detail && (
-          <span className={`text-[10px] block mt-0.5 ${dimmed ? "text-gray-400" : "text-violet-500 font-mono"}`}>{detail}</span>
-        )}
-      </div>
-    );
-  }
-  return (
-    <div className={`flex-1 rounded-xl px-3 py-2.5 text-center border-2 shadow-sm ${
-      highlight
-        ? "bg-emerald-100 border-emerald-400 ring-2 ring-emerald-300/50"
-        : dimmed
-        ? "bg-gray-50 border-gray-100 opacity-30"
-        : "bg-gray-50 border-gray-200"
-    }`}>
-      <span className={`text-xs font-bold ${highlight ? "text-emerald-700" : "text-gray-500"}`}>{text}</span>
-      {highlight && <span className="text-[9px] text-emerald-500 block mt-0.5">← Llega aquí</span>}
-    </div>
-  );
-}
 
-function ProbabilityBar({ label, sublabel, value, isWinner }: { label: string; sublabel: string; value: number; isWinner?: boolean }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-16 shrink-0 text-right">
-        <span className={`text-xs font-bold ${isWinner ? "text-emerald-700" : "text-gray-600"}`}>{label}</span>
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${
-                isWinner ? "bg-gradient-to-r from-emerald-400 to-emerald-500" : "bg-gradient-to-r from-violet-200 to-violet-300"
-              }`}
-              style={{ width: `${value}%` }}
-            />
-          </div>
-          <span className={`text-xs font-bold tabular-nums min-w-[3rem] ${isWinner ? "text-emerald-700" : "text-gray-500"}`}>
-            {value}%
-          </span>
-        </div>
-        <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p>
-      </div>
-      {isWinner && (
-        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">PREDICCIÓN</span>
-      )}
-    </div>
-  );
-}
 
 function WhyItem({ title, text }: { title: string; text: string }) {
   return (
