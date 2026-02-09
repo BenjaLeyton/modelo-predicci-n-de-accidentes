@@ -568,6 +568,228 @@ export default function ModelStatus({ info, loading }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Arrow 5→6 */}
+            <div className="flex justify-center my-2">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Se agrega incertidumbre creciente a cada mes</span>
+                <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </div>
+            </div>
+
+            {/* ── STEP 6: Confidence interval ── */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-xs font-bold">6</span>
+                </div>
+                <h5 className="text-xs font-bold text-emerald-800">Intervalo de confianza al 95% (la banda sombreada del gráfico)</h5>
+              </div>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-gray-500 mb-3">
+                  Ningún pronóstico es exacto. El sistema calcula un <strong>rango de incertidumbre</strong> alrededor de cada predicción:
+                </p>
+                <div className="bg-amber-50/50 rounded-lg p-4 border border-amber-100/30 mb-3">
+                  <p className="text-xs font-mono text-center text-amber-800 mb-3">
+                    Límite = predicción ± 1.96 × σ × √(1 + meses_adelante / N)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+                    <div className="bg-white/70 rounded-lg p-2.5 border border-amber-100/30 text-center">
+                      <p className="font-bold text-amber-700 text-xs mb-0.5">1.96</p>
+                      <p className="text-amber-600/70">Factor para 95% de confianza</p>
+                    </div>
+                    <div className="bg-white/70 rounded-lg p-2.5 border border-amber-100/30 text-center">
+                      <p className="font-bold text-amber-700 text-xs mb-0.5">σ (sigma)</p>
+                      <p className="text-amber-600/70">Desviación estándar de los errores del modelo en datos históricos</p>
+                    </div>
+                    <div className="bg-white/70 rounded-lg p-2.5 border border-amber-100/30 text-center">
+                      <p className="font-bold text-amber-700 text-xs mb-0.5">√(1 + m/N)</p>
+                      <p className="text-amber-600/70">Más lejos en el futuro = banda más ancha</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100 text-center">
+                    <p className="text-[10px] text-gray-500 mb-1">Mes 1</p>
+                    <p className="text-sm font-bold text-emerald-700">33.4</p>
+                    <p className="text-[10px] text-gray-400">± 8.2</p>
+                    <div className="mt-1 h-1.5 bg-emerald-100 rounded-full mx-2"><div className="h-full bg-emerald-400 rounded-full" style={{ width: "85%" }} /></div>
+                    <p className="text-[9px] text-emerald-500 mt-1">banda estrecha</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-3 border border-amber-100 text-center">
+                    <p className="text-[10px] text-gray-500 mb-1">Mes 12</p>
+                    <p className="text-sm font-bold text-amber-700">28.7</p>
+                    <p className="text-[10px] text-gray-400">± 14.1</p>
+                    <div className="mt-1 h-1.5 bg-amber-100 rounded-full mx-2"><div className="h-full bg-amber-400 rounded-full" style={{ width: "55%" }} /></div>
+                    <p className="text-[9px] text-amber-500 mt-1">banda media</p>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-3 border border-red-100 text-center">
+                    <p className="text-[10px] text-gray-500 mb-1">Mes 24</p>
+                    <p className="text-sm font-bold text-red-700">25.3</p>
+                    <p className="text-[10px] text-gray-400">± 19.8</p>
+                    <div className="mt-1 h-1.5 bg-red-100 rounded-full mx-2"><div className="h-full bg-red-400 rounded-full" style={{ width: "30%" }} /></div>
+                    <p className="text-[9px] text-red-500 mt-1">banda ancha</p>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    <strong>En la práctica:</strong> Predecir el mes siguiente es más confiable que predecir dentro de 2 años.
+                    Si la banda es muy ancha, el modelo necesita <strong>más datos históricos</strong> para reducir σ.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Arrow 6→7 */}
+            <div className="flex justify-center my-2">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-100/50 px-3 py-1 rounded-full">Ahora se predice el tipo de Causa Raíz de esos accidentes</span>
+                <svg className="w-5 h-5 text-emerald-300 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </div>
+            </div>
+
+            {/* ── STEP 7: Per-RC prediction ── */}
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white text-xs font-bold">7</span>
+                </div>
+                <h5 className="text-xs font-bold text-emerald-800">Se predice la distribución de Causa Raíz: un modelo por cada RC</h5>
+              </div>
+              <div className="bg-white/70 rounded-xl p-4 border border-emerald-100/50">
+                <p className="text-[11px] text-gray-500 mb-3">
+                  No basta saber <em>cuántos</em> accidentes habrá. También se predice <strong>qué tipo de causa raíz tendrán</strong>.
+                  Se entrena un <strong>XGBRegressor independiente por cada categoría RC</strong>:
+                </p>
+
+                <div className="bg-purple-50/30 rounded-xl p-4 border border-purple-100/30 mb-4">
+                  <p className="text-[11px] text-purple-700 font-semibold mb-3">Cada RC tiene su propia serie temporal y su propio modelo:</p>
+                  <div className="space-y-2">
+                    {[
+                      { rc: "RC 03", data: "Ene:12, Feb:8, Mar:15, Abr:10...", result: "→ XGBRegressor → 11.2 estimados", ok: true },
+                      { rc: "RC 05", data: "Ene:18, Feb:14, Mar:22, Abr:13...", result: "→ XGBRegressor → 9.8 estimados", ok: true },
+                      { rc: "RC 06", data: "Ene:5, Feb:7, Mar:4, Abr:6...", result: "→ XGBRegressor → 5.1 estimados", ok: true },
+                      { rc: "RC 13", data: "Ene:3, Feb:5, Mar:6, Abr:2...", result: "→ XGBRegressor → 3.9 estimados", ok: true },
+                    ].map((item) => (
+                      <div key={item.rc} className="flex items-center gap-3 bg-white/70 rounded-lg px-3 py-2 border border-purple-100/30">
+                        <span className="bg-purple-100 text-purple-700 px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 min-w-[3.5rem] text-center">{item.rc}</span>
+                        <code className="text-[10px] text-gray-400 font-mono flex-1 min-w-0 truncate">{item.data}</code>
+                        <span className="text-[11px] font-semibold text-purple-700 shrink-0">{item.result}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3 bg-gray-50/70 rounded-lg px-3 py-2 border border-gray-200 border-dashed">
+                      <span className="bg-gray-100 text-gray-500 px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 min-w-[3.5rem] text-center">RC 25</span>
+                      <code className="text-[10px] text-gray-400 font-mono flex-1 min-w-0 truncate">Ene:1, Feb:0, Mar:2, Abr:0... (pocos datos)</code>
+                      <span className="text-[11px] font-semibold text-gray-500 shrink-0">→ Proporción histórica: 1.4</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div className="bg-emerald-50/60 rounded-lg p-3 border border-emerald-100/50">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">RC con 6+ meses de datos</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-600/80 leading-relaxed">
+                      XGBRegressor dedicado con features temporales propios. Cada RC captura su tendencia y estacionalidad.
+                    </p>
+                  </div>
+                  <div className="bg-gray-50/60 rounded-lg p-3 border border-gray-200/50">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <div className="w-5 h-5 rounded bg-gray-400 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">RC con pocos datos (&lt;6 meses)</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Se usa la proporción histórica de los últimos 12 meses como fallback.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Normalization visual */}
+                <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                  <p className="text-[11px] text-emerald-700 font-semibold mb-2">Normalización final: las RC deben sumar el total pronosticado</p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                    {[
+                      { rc: "RC 03", val: "11.2" },
+                      { rc: "RC 05", val: "9.8" },
+                      { rc: "RC 06", val: "5.1" },
+                      { rc: "...", val: "" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        {i > 0 && <span className="text-gray-400 font-bold">+</span>}
+                        {item.rc === "..." ? (
+                          <span className="text-gray-400 text-xs">...</span>
+                        ) : (
+                          <div className="rounded-lg px-2 py-1 bg-white border border-emerald-100 text-center">
+                            <p className="text-[9px] text-gray-400">{item.rc}</p>
+                            <p className="text-[11px] font-bold text-emerald-700">{item.val}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <span className="text-gray-400 font-bold">=</span>
+                    <div className="rounded-lg px-3 py-1 bg-emerald-500 text-center shadow-md shadow-emerald-500/20">
+                      <p className="text-[9px] text-emerald-100">Total</p>
+                      <p className="text-sm font-bold text-white">33.4</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 leading-relaxed text-center">
+                    Se escalan proporcionalmente para que la suma de todas las RC sea exactamente igual al total pronosticado del paso 4.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Result summary ── */}
+            <div className="mt-5 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-xl p-5 border border-emerald-200">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h4 className="text-sm font-bold text-emerald-800">Resultado final del pronóstico</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white/70 rounded-lg p-3 border border-emerald-200/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    <h5 className="text-xs font-bold text-emerald-700">¿Cuántos accidentes habrá?</h5>
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    Un <strong>número por cada mes futuro</strong> con banda de confianza al 95%.
+                    El gráfico de tendencia muestra la línea histórica y la proyección con su banda.
+                  </p>
+                </div>
+                <div className="bg-white/70 rounded-lg p-3 border border-emerald-200/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <h5 className="text-xs font-bold text-purple-700">¿Qué tipo de Causa Raíz tendrán?</h5>
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    La <strong>distribución estimada por RC</strong>: cuántos serán RC 03, cuántos RC 05, etc.
+                    El gráfico de barras muestra la proporción predicha de cada categoría.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* What does the dashboard show */}
