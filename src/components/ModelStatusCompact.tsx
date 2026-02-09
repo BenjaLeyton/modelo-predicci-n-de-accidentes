@@ -5,7 +5,6 @@ import type { ModelInfo } from "@/lib/api";
 interface Props {
   info: ModelInfo | null;
   loading: boolean;
-  regressorMetrics?: Record<string, number> | null;
 }
 
 /* ── RC class descriptions (short, for tooltips) ── */
@@ -25,22 +24,7 @@ const RC_DESCRIPTIONS: Record<string, string> = {
 };
 
 
-const REGRESSOR_METRICS = [
-  { key: "mae", label: "MAE", desc: "Error Absoluto Medio", green: 3, amber: 6, invert: false },
-  { key: "rmse", label: "RMSE", desc: "Error Cuadrático Medio", green: 4, amber: 8, invert: false },
-  { key: "r2", label: "R\u00B2", desc: "Coef. Determinación", green: 0.7, amber: 0.4, invert: true },
-  { key: "sigma", label: "\u03C3", desc: "Desv. Estándar Residual", green: 4, amber: 8, invert: false },
-] as const;
-
-function getMetricStyle(val: number, green: number, amber: number, invert: boolean) {
-  const isGood = invert ? val >= green : val <= green;
-  const isMid = invert ? val >= amber : val <= amber;
-  if (isGood) return { color: "emerald", level: "Bueno", bg: "bg-emerald-50", text: "text-emerald-700", badge: "bg-emerald-100 text-emerald-700" };
-  if (isMid) return { color: "amber", level: "Aceptable", bg: "bg-amber-50", text: "text-amber-700", badge: "bg-amber-100 text-amber-700" };
-  return { color: "red", level: "Alto", bg: "bg-red-50", text: "text-red-700", badge: "bg-red-100 text-red-700" };
-}
-
-export default function ModelStatusCompact({ info, loading, regressorMetrics }: Props) {
+export default function ModelStatusCompact({ info, loading }: Props) {
   /* ── Loading ── */
   if (loading) {
     return (
@@ -164,39 +148,6 @@ export default function ModelStatusCompact({ info, loading, regressorMetrics }: 
           />
         </div>
       </div>
-
-      {/* Regressor Metrics */}
-      {regressorMetrics ? (
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h4 className="text-xs font-bold text-gray-600 mb-3">Rendimiento del Pronóstico (XGBRegressor)</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {REGRESSOR_METRICS.map((m) => {
-              const val = regressorMetrics[m.key];
-              if (val == null) return null;
-              const s = getMetricStyle(val, m.green, m.amber, m.invert);
-              return (
-                <div key={m.key} className={`rounded-xl border p-3 ${s.bg}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-bold text-gray-500">{m.label}</span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${s.badge}`}>{s.level}</span>
-                  </div>
-                  <p className={`text-lg font-bold ${s.text} tabular-nums`}>
-                    {m.key === "r2" ? val.toFixed(4) : val.toFixed(2)}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h4 className="text-xs font-bold text-gray-600 mb-2">Rendimiento del Pronóstico (XGBRegressor)</h4>
-          <p className="text-xs text-gray-400">
-            Las métricas MAE, RMSE, R² y σ aparecerán aquí tras generar un pronóstico en la sección inferior.
-          </p>
-        </div>
-      )}
 
       {/* Compact Classes as tags */}
       {info.clases && info.clases.length > 0 && (

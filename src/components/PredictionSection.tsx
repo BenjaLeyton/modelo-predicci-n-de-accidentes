@@ -24,11 +24,7 @@ function monthsBetween(a: string, b: string): number {
   return (db.getFullYear() - da.getFullYear()) * 12 + (db.getMonth() - da.getMonth());
 }
 
-interface Props {
-  onMetrics?: (metrics: Record<string, number> | null) => void;
-}
-
-export default function PredictionSection({ onMetrics }: Props) {
+export default function PredictionSection() {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -77,11 +73,9 @@ export default function PredictionSection({ onMetrics }: Props) {
     try {
       const data = await getPrediction(startDate, endDate);
       setPrediction(data);
-      onMetrics?.(data.metricas_regressor ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al generar pronóstico");
       setPrediction(null);
-      onMetrics?.(null);
     } finally {
       setLoading(false);
     }
@@ -260,40 +254,6 @@ export default function PredictionSection({ onMetrics }: Props) {
             </div>
           </div>
 
-          {/* Regressor Metrics */}
-          {prediction.metricas_regressor && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              {([
-                { key: "mae", label: "MAE", desc: "Error Absoluto Medio", green: 3, amber: 6 },
-                { key: "rmse", label: "RMSE", desc: "Error Cuadrático Medio", green: 4, amber: 8 },
-                { key: "r2", label: "R\u00B2", desc: "Coef. Determinación", green: 0.7, amber: 0.4, invert: true },
-                { key: "sigma", label: "\u03C3", desc: "Desv. Estándar Residual", green: 4, amber: 8 },
-              ] as const).map((m) => {
-                const val = prediction.metricas_regressor![m.key];
-                if (val == null) return null;
-                const isGood = "invert" in m && m.invert ? val >= m.green : val <= m.green;
-                const isMid = "invert" in m && m.invert ? val >= m.amber : val <= m.amber;
-                const color = isGood ? "emerald" : isMid ? "amber" : "red";
-                const bg = color === "emerald" ? "bg-emerald-50 border-emerald-200" : color === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
-                const text = color === "emerald" ? "text-emerald-700" : color === "amber" ? "text-amber-700" : "text-red-700";
-                const badge = color === "emerald" ? "bg-emerald-100 text-emerald-700" : color === "amber" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
-                const levelText = isGood ? "Bueno" : isMid ? "Aceptable" : "Alto";
-                return (
-                  <div key={m.key} className={`rounded-2xl border p-4 ${bg}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-gray-500">{m.label}</span>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badge}`}>{levelText}</span>
-                    </div>
-                    <p className={`text-xl font-bold ${text} tabular-nums`}>
-                      {m.key === "r2" ? val.toFixed(4) : val.toFixed(2)}
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{m.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <PredictionTrendChart
@@ -301,6 +261,94 @@ export default function PredictionSection({ onMetrics }: Props) {
               pronostico={prediction.pronostico}
             />
             <PredictionRCChart data={prediction.distribucion_rc_predicha} />
+          </div>
+
+          {/* Summary Table */}
+          <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <h4 className="text-sm font-bold text-gray-700">Resumen del Pronóstico</h4>
+            </div>
+
+            {/* Monthly forecast */}
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h5 className="text-xs font-bold text-gray-500 mb-3">Accidentes Estimados por Mes</h5>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs">
+                      <th className="px-4 py-2.5 text-left font-semibold">Periodo</th>
+                      <th className="px-4 py-2.5 text-right font-semibold">Estimado</th>
+                      <th className="px-4 py-2.5 text-right font-semibold">IC 95%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prediction.pronostico.map((p, i) => (
+                      <tr key={p.periodo} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                        <td className="px-4 py-2.5 font-medium text-gray-700">{p.periodo}</td>
+                        <td className="px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums">{Math.round(p.cantidad_estimada)}</td>
+                        <td className="px-4 py-2.5 text-right text-gray-400 tabular-nums text-xs">{Math.round(p.limite_inferior)} – {Math.round(p.limite_superior)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-emerald-200 bg-emerald-50/50">
+                      <td className="px-4 py-2.5 font-bold text-gray-700">Total</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums">{Math.round(prediction.total_estimado)}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-400 tabular-nums text-xs">
+                        {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_inferior, 0))} – {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_superior, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* RC distribution */}
+            {prediction.distribucion_rc_predicha.length > 0 && (
+              <div className="px-6 py-4">
+                <h5 className="text-xs font-bold text-gray-500 mb-3">Distribución por Causa Raíz (RC)</h5>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-500 text-xs">
+                        <th className="px-4 py-2.5 text-left font-semibold">Causa Raíz</th>
+                        <th className="px-4 py-2.5 text-right font-semibold">Accidentes Est.</th>
+                        <th className="px-4 py-2.5 text-right font-semibold">%</th>
+                        <th className="px-4 py-2.5 text-left font-semibold w-1/3">Proporción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prediction.distribucion_rc_predicha.map((rc, i) => (
+                        <tr key={rc.categoria} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
+                          <td className="px-4 py-2.5 font-semibold text-gray-700">{rc.categoria}</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-teal-700 tabular-nums">{Math.round(rc.cantidad_estimada)}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-500 tabular-nums">{rc.porcentaje.toFixed(1)}%</td>
+                          <td className="px-4 py-2.5">
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-teal-500 transition-all duration-500"
+                                style={{ width: `${Math.min(rc.porcentaje, 100)}%` }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-teal-200 bg-teal-50/50">
+                        <td className="px-4 py-2.5 font-bold text-gray-700">Total</td>
+                        <td className="px-4 py-2.5 text-right font-bold text-teal-700 tabular-nums">{Math.round(prediction.total_estimado)}</td>
+                        <td className="px-4 py-2.5 text-right text-gray-500 tabular-nums">100%</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Methodology note - XGBoost */}
@@ -358,6 +406,48 @@ export default function PredictionSection({ onMetrics }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Regressor Metrics */}
+          {prediction.metricas_regressor && (
+            <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6 mt-6">
+              <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Rendimiento del Modelo (XGBRegressor)
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {([
+                  { key: "mae", label: "MAE", desc: "Error Absoluto Medio", green: 3, amber: 6 },
+                  { key: "rmse", label: "RMSE", desc: "Error Cuadrático Medio", green: 4, amber: 8 },
+                  { key: "r2", label: "R\u00B2", desc: "Coef. Determinación", green: 0.7, amber: 0.4, invert: true },
+                  { key: "sigma", label: "\u03C3", desc: "Desv. Estándar Residual", green: 4, amber: 8 },
+                ] as const).map((m) => {
+                  const val = prediction.metricas_regressor![m.key];
+                  if (val == null) return null;
+                  const isGood = "invert" in m && m.invert ? val >= m.green : val <= m.green;
+                  const isMid = "invert" in m && m.invert ? val >= m.amber : val <= m.amber;
+                  const color = isGood ? "emerald" : isMid ? "amber" : "red";
+                  const bg = color === "emerald" ? "bg-emerald-50 border-emerald-200" : color === "amber" ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
+                  const text = color === "emerald" ? "text-emerald-700" : color === "amber" ? "text-amber-700" : "text-red-700";
+                  const badge = color === "emerald" ? "bg-emerald-100 text-emerald-700" : color === "amber" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+                  const levelText = isGood ? "Bueno" : isMid ? "Aceptable" : "Alto";
+                  return (
+                    <div key={m.key} className={`rounded-2xl border p-4 ${bg}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-gray-500">{m.label}</span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badge}`}>{levelText}</span>
+                      </div>
+                      <p className={`text-xl font-bold ${text} tabular-nums`}>
+                        {m.key === "r2" ? val.toFixed(4) : val.toFixed(2)}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{m.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 
