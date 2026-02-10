@@ -126,7 +126,7 @@ export async function getAnalysis(start: string, end: string): Promise<AnalysisD
   return mapAnalysis(raw);
 }
 
-export async function uploadFile(file: File): Promise<{ success: boolean; mensaje: string; filas?: number }> {
+export async function uploadFile(file: File): Promise<{ success: boolean; mensaje: string; filas?: number; columnas?: number; fecha_min?: string; fecha_max?: string }> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch(`${API}/upload`, { method: "POST", body: form });

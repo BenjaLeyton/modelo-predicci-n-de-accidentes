@@ -273,32 +273,75 @@ export default function PredictionSection() {
             </div>
 
             {/* Monthly forecast */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h5 className="text-xs font-bold text-gray-500 mb-3">Accidentes Estimados por Mes</h5>
-              <div className="overflow-x-auto">
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h5 className="text-xs font-bold text-gray-500 mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Accidentes Estimados por Mes
+              </h5>
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-gray-500 text-xs">
-                      <th className="px-4 py-2.5 text-left font-semibold">Periodo</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">Estimado</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">IC 95%</th>
+                    <tr className="bg-gradient-to-r from-slate-700 to-slate-800 text-white text-xs">
+                      <th className="px-4 py-3 text-left font-semibold rounded-tl-xl">Periodo</th>
+                      <th className="px-4 py-3 text-center font-semibold">Estimado</th>
+                      <th className="px-4 py-3 font-semibold text-center">Rango</th>
+                      <th className="px-4 py-3 text-right font-semibold rounded-tr-xl">IC 95%</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {prediction.pronostico.map((p, i) => (
-                      <tr key={p.periodo} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                        <td className="px-4 py-2.5 font-medium text-gray-700">{p.periodo}</td>
-                        <td className="px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums">{Math.round(p.cantidad_estimada)}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-400 tabular-nums text-xs">{Math.round(p.limite_inferior)} – {Math.round(p.limite_superior)}</td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const vals = prediction.pronostico.map(p => Math.round(p.cantidad_estimada));
+                      const maxVal = Math.max(...vals);
+                      const minVal = Math.min(...vals);
+                      const range = maxVal - minVal || 1;
+                      return prediction.pronostico.map((p, i) => {
+                        const est = Math.round(p.cantidad_estimada);
+                        const lo = Math.round(p.limite_inferior);
+                        const hi = Math.round(p.limite_superior);
+                        const barPct = ((est - minVal) / range) * 100;
+                        return (
+                          <tr key={p.periodo} className={`border-b border-gray-100 last:border-b-0 transition-colors hover:bg-emerald-50/50 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/30"}`}>
+                            <td className="px-4 py-3">
+                              <span className="font-semibold text-gray-700">{p.periodo}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center justify-center min-w-[40px] px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold tabular-nums text-sm">
+                                {est}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-400 tabular-nums w-6 text-right">{lo}</span>
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden relative">
+                                  <div
+                                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
+                                    style={{ width: `${Math.max(barPct, 8)}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-gray-400 tabular-nums w-6">{hi}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-xs text-gray-400 tabular-nums">{lo} – {hi}</span>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-emerald-200 bg-emerald-50/50">
-                      <td className="px-4 py-2.5 font-bold text-gray-700">Total</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums">{Math.round(prediction.total_estimado)}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-400 tabular-nums text-xs">
-                        {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_inferior, 0))} – {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_superior, 0))}
+                    <tr className="bg-gradient-to-r from-emerald-50 to-teal-50 border-t-2 border-emerald-300">
+                      <td className="px-4 py-3 font-bold text-gray-700">Total</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[40px] px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-900 font-extrabold tabular-nums text-sm">
+                          {Math.round(prediction.total_estimado)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-xs font-semibold text-emerald-700 tabular-nums">
+                          {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_inferior, 0))} – {Math.round(prediction.pronostico.reduce((s, p) => s + p.limite_superior, 0))}
+                        </span>
                       </td>
                     </tr>
                   </tfoot>
@@ -308,40 +351,77 @@ export default function PredictionSection() {
 
             {/* RC distribution */}
             {prediction.distribucion_rc_predicha.length > 0 && (
-              <div className="px-6 py-4">
-                <h5 className="text-xs font-bold text-gray-500 mb-3">Distribución por Causa Raíz (RC)</h5>
-                <div className="overflow-x-auto">
+              <div className="px-6 py-5">
+                <h5 className="text-xs font-bold text-gray-500 mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                  Distribución por Causa Raíz (RC)
+                </h5>
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-xs">
-                        <th className="px-4 py-2.5 text-left font-semibold">Causa Raíz</th>
-                        <th className="px-4 py-2.5 text-right font-semibold">Accidentes Est.</th>
-                        <th className="px-4 py-2.5 text-right font-semibold">%</th>
-                        <th className="px-4 py-2.5 text-left font-semibold w-1/3">Proporción</th>
+                      <tr className="bg-gradient-to-r from-slate-700 to-slate-800 text-white text-xs">
+                        <th className="px-4 py-3 text-left font-semibold rounded-tl-xl">Causa Raíz</th>
+                        <th className="px-4 py-3 text-center font-semibold">Accidentes Est.</th>
+                        <th className="px-4 py-3 text-center font-semibold">%</th>
+                        <th className="px-4 py-3 text-left font-semibold rounded-tr-xl w-1/3">Proporción</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {prediction.distribucion_rc_predicha.map((rc, i) => (
-                        <tr key={rc.categoria} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-                          <td className="px-4 py-2.5 font-semibold text-gray-700">{rc.categoria}</td>
-                          <td className="px-4 py-2.5 text-right font-bold text-teal-700 tabular-nums">{Math.round(rc.cantidad_estimada)}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-500 tabular-nums">{rc.porcentaje.toFixed(1)}%</td>
-                          <td className="px-4 py-2.5">
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-teal-500 transition-all duration-500"
-                                style={{ width: `${Math.min(rc.porcentaje, 100)}%` }}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {prediction.distribucion_rc_predicha.map((rc, i) => {
+                        const colors = [
+                          "from-violet-400 to-purple-500",
+                          "from-blue-400 to-indigo-500",
+                          "from-cyan-400 to-teal-500",
+                          "from-emerald-400 to-green-500",
+                          "from-amber-400 to-orange-500",
+                          "from-rose-400 to-pink-500",
+                          "from-fuchsia-400 to-purple-500",
+                          "from-sky-400 to-blue-500",
+                          "from-lime-400 to-emerald-500",
+                          "from-orange-400 to-red-500",
+                          "from-teal-400 to-cyan-500",
+                          "from-indigo-400 to-violet-500",
+                        ];
+                        const grad = colors[i % colors.length];
+                        return (
+                          <tr key={rc.categoria} className={`border-b border-gray-100 last:border-b-0 transition-colors hover:bg-violet-50/40 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/30"}`}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2.5 h-2.5 rounded-sm bg-gradient-to-br ${grad} shrink-0`} />
+                                <span className="font-semibold text-gray-700">{rc.categoria}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded-lg bg-violet-100 text-violet-800 font-bold tabular-nums text-sm">
+                                {Math.round(rc.cantidad_estimada)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="text-gray-600 tabular-nums font-medium">{rc.porcentaje.toFixed(1)}%</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full bg-gradient-to-r ${grad} transition-all duration-500`}
+                                  style={{ width: `${Math.max(Math.min(rc.porcentaje, 100), 2)}%` }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-teal-200 bg-teal-50/50">
-                        <td className="px-4 py-2.5 font-bold text-gray-700">Total</td>
-                        <td className="px-4 py-2.5 text-right font-bold text-teal-700 tabular-nums">{Math.round(prediction.total_estimado)}</td>
-                        <td className="px-4 py-2.5 text-right text-gray-500 tabular-nums">100%</td>
+                      <tr className="bg-gradient-to-r from-violet-50 to-purple-50 border-t-2 border-violet-300">
+                        <td className="px-4 py-3 font-bold text-gray-700">Total</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded-lg bg-violet-200 text-violet-900 font-extrabold tabular-nums text-sm">
+                            {Math.round(prediction.total_estimado)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-bold text-gray-600 tabular-nums">100%</span>
+                        </td>
                         <td />
                       </tr>
                     </tfoot>

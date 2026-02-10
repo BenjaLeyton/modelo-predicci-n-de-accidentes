@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { getModelInfo, getAnalysis } from "@/lib/api";
 import type { ModelInfo, AnalysisData } from "@/lib/api";
 import ModelStatus from "./ModelStatus";
-import ModelStatusCompact from "./ModelStatusCompact";
 import DateRangePicker from "./DateRangePicker";
 import StatsCards from "./StatsCards";
 import UploadSection from "./UploadSection";
@@ -70,11 +69,11 @@ export default function Dashboard() {
 
         <div className="relative max-w-[1400px] mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
+            <img
+              src="/codelco-logo.jpg"
+              alt="Codelco"
+              className="w-11 h-11 rounded-xl shadow-lg shadow-blue-500/30 object-cover"
+            />
             <div>
               <h1 className="text-xl font-bold text-white">
                 Sistema de Seguridad Laboral
@@ -127,10 +126,7 @@ export default function Dashboard() {
         <div className={activeTab !== "panel" ? "hidden" : ""}>
           <div className="space-y-8">
             {/* 1. CARGA DE DATOS */}
-            <UploadSection onTrainComplete={fetchModel} modelInfo={modelInfo} modelLoading={modelLoading} />
-
-            {/* 2. MODELO (compacto) */}
-            <ModelStatusCompact info={modelInfo} loading={modelLoading} />
+            <UploadSection modelInfo={modelInfo} modelLoading={modelLoading} />
 
             {/* 3. ANÁLISIS HISTÓRICO */}
             <section>
